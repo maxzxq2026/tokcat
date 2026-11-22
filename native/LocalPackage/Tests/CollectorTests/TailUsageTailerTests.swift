@@ -529,13 +529,17 @@ extension UsageTailer {
         defer { for p in paths { try? FileManager.default.removeItem(atPath: p) } }
 
         let snapshot = await tailer.liveSnapshot(windowSecs: 600)
-        #expect(snapshot.buckets == (await tailer.trace(windowSecs: 600)))
+        // Hoisted awaits: #expect's autoclosures don't support concurrency
+        // under the Swift 6.0.3 toolchain.
+        let trace = await tailer.trace(windowSecs: 600)
+        #expect(snapshot.buckets == trace)
 
         let windowTotal = snapshot.windowTokensByClient.values.reduce(0, +)
-        #expect(Double(Float(windowTotal) / 10.0)
-            == (await tailer.rateInWindow(600)))
+        let rateIn600 = await tailer.rateInWindow(600)
+        #expect(Double(Float(windowTotal) / 10.0) == rateIn600)
         let recentTotal = snapshot.recentTokensByClient.values.reduce(0, +)
-        #expect(Double(Float(recentTotal)) == (await tailer.ratePerMin()))
+        let rate60 = await tailer.ratePerMin()
+        #expect(Double(Float(recentTotal)) == rate60)
     }
 
     // The per-client totals are the point: they are what lets the menubar

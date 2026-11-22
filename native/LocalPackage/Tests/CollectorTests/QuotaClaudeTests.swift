@@ -71,11 +71,16 @@ private func date(_ epochSeconds: Int64) -> Date {
             accessToken: "a",
             expiresAt: date(1_700_000_000), scopes: ["user:profile"],
             rateLimitTier: nil, subscriptionType: nil)
-        let error = #expect(throws: QuotaError.self) {
+        do {
             try ClaudeQuotaProvider.validateCredentials(
                 expired, now: date(1_700_000_001))
+            Issue.record("expected QuotaError: access token expired")
+        } catch {
+            // #expect(throws:) only returns the thrown error on newer
+            // toolchains; the do/catch form compiles under Swift 6.0.3 too.
+            #expect((error as? QuotaError)?.message
+                == "Claude access token expired. Run `claude` to refresh it.")
         }
-        #expect(error?.message == "Claude access token expired. Run `claude` to refresh it.")
     }
 
     /// Expiry is checked before scopes, so a credential that is both expired
@@ -86,11 +91,14 @@ private func date(_ epochSeconds: Int64) -> Date {
             accessToken: "a",
             expiresAt: date(1_700_000_000), scopes: ["user:inference"],
             rateLimitTier: nil, subscriptionType: nil)
-        let error = #expect(throws: QuotaError.self) {
+        do {
             try ClaudeQuotaProvider.validateCredentials(
                 credentials, now: date(1_700_000_001))
+            Issue.record("expected QuotaError: access token expired")
+        } catch {
+            #expect((error as? QuotaError)?.message
+                == "Claude access token expired. Run `claude` to refresh it.")
         }
-        #expect(error?.message == "Claude access token expired. Run `claude` to refresh it.")
     }
 
     @Test func validateAcceptsLiveCredentials() throws {
@@ -116,12 +124,15 @@ private func date(_ epochSeconds: Int64) -> Date {
             accessToken: "a",
             expiresAt: nil, scopes: ["user:inference"],
             rateLimitTier: nil, subscriptionType: nil)
-        let error = #expect(throws: QuotaError.self) {
+        do {
             try ClaudeQuotaProvider.validateCredentials(
                 credentials, now: date(1_700_000_000))
+            Issue.record("expected QuotaError: missing user:profile scope")
+        } catch {
+            #expect((error as? QuotaError)?.message
+                == "Claude OAuth token lacks the user:profile scope. "
+                + "Run `claude logout && claude login`.")
         }
-        #expect(error?.message == "Claude OAuth token lacks the user:profile scope. "
-            + "Run `claude logout && claude login`.")
     }
 
     @Test func mapsOAuthWindows() {
