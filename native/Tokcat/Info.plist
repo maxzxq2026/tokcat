@@ -29,9 +29,9 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 handlecusion</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/handlecusion/tokcat/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/maxzxq2026/tokcat/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>73X+D63w154FiIFy5DlPrKatFI1bwvZtyN/7ZTdaMiI=</string>
 	<key>SUScheduledCheckInterval</key>

@@ -51,11 +51,11 @@ targets:
         LSUIElement: true
         LSMinimumSystemVersion: "13.0"
         NSHumanReadableCopyright: "© 2026 handlecusion"
-        # Sparkle 2. The appcast is published next to latest.json on every
-        # GitHub release. SUPublicEDKey is the production public key (the
-        # private half lives in the login keychain, account "tokcat", plus
-        # the SPARKLE_PRIVATE_KEY GitHub secret used by sign_update in CI).
-        SUFeedURL: https://github.com/handlecusion/tokcat/releases/latest/download/appcast.xml
+        # Sparkle 2. Fork change: the feed points at this fork's releases and
+        # automatic checks are off — the official appcast would overwrite the
+        # fork build. When publishing fork releases, generate a fresh keypair
+        # (generate_keys) and replace SUPublicEDKey with the new public half.
+        SUFeedURL: https://github.com/maxzxq2026/tokcat/releases/latest/download/appcast.xml
         SUPublicEDKey: 73X+D63w154FiIFy5DlPrKatFI1bwvZtyN/7ZTdaMiI=
-        SUEnableAutomaticChecks: true
+        SUEnableAutomaticChecks: false
         SUScheduledCheckInterval: 3600

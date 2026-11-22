@@ -6,9 +6,9 @@ import Sparkle
 // every launch, which Sparkle does by default when automatic checks are on).
 //
 // Update feed configuration lives in Info.plist:
-//   SUFeedURL      = https://github.com/handlecusion/tokcat/releases/latest/download/appcast.xml
+//   SUFeedURL      = https://github.com/maxzxq2026/tokcat/releases/latest/download/appcast.xml (fork)
 //   SUPublicEDKey  = <Sparkle EdDSA public key — generated once, private half in CI>
-//   SUEnableAutomaticChecks = YES
+//   SUEnableAutomaticChecks = NO (fork build: manual checks only)
 //
 // The app is ad-hoc signed, so EdDSA is the sole integrity check for
 // Sparkle-driven updates (Apple-signature matching only applies to
@@ -34,8 +34,10 @@ public final class UpdateService: NSObject, ObservableObject {
             updaterDelegate: self,
             userDriverDelegate: nil)
         controller = c
-        c.updater.automaticallyChecksForUpdates = true
-        c.updater.updateCheckInterval = 3600
+        // Fork build: automatic checks stay off (Info.plist agrees) so the
+        // official release channel can never silently replace this build;
+        // the manual "Check for Updates" item still targets the fork feed.
+        c.updater.automaticallyChecksForUpdates = false
         c.updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
     }
