@@ -20,3 +20,4 @@ native/LocalPackage/.build
 native/build
 native/build-local
 native/LocalPackage/build
+backup/
