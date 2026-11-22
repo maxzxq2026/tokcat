@@ -18,7 +18,6 @@ public struct ContentHeightKey: PreferenceKey {
 public struct DashboardRootView: View {
     @EnvironmentObject private var store: DashboardStore
     @EnvironmentObject private var liveTrace: LiveTraceStore
-    @EnvironmentObject private var quotaStore: QuotaStore
 
     // Room the settings overlay needs when the dashboard itself is short
     // (e.g. still loading): card height + breathing space.
@@ -102,14 +101,13 @@ public struct DashboardRootView: View {
         }
     }
 
-    private var liveClientIds: Set<String> {
-        TraceClients.liveClientIds(liveTrace.trace)
-    }
-
-    // Overview card order mirrors App.tsx:514-538: chart → limits → live
-    // trace → streaks. Client tabs (App.tsx:539-563) have no trace card.
-    // Fork addition: the per-agent model-usage card sits right under the
-    // usage chart, like the React fork's AgentModelCard.
+    // Overview card order: chart → model usage → live trace → streaks.
+    // Client tabs (App.tsx:539-563) have no trace card.
+    // Fork additions: the per-agent model-usage card sits right under the
+    // usage chart, like the React fork's AgentModelCard, and the OAuth
+    // limits card is dropped entirely — this fork runs third-party
+    // providers over API keys, so official-account quota tiles never
+    // contain data (agents show up as tabs with usage, like Hermes).
     private func overviewStack(_ stats: Stats) -> some View {
         VStack(spacing: 12) {
             UsageBarChart(
@@ -120,11 +118,6 @@ public struct DashboardRootView: View {
                 stats: stats,
                 showsHiddenNote: true)
             AgentModelCard(clients: store.dashboardClients)
-            AgentLimitsCard(
-                clients: store.limitsClients,
-                agentUsage: store.visibleAgentUsage,
-                liveClientIds: liveClientIds,
-                hiddenAgentNames: hiddenLimitNames)
             UsageTraceCard(
                 buckets: liveTrace.trace,
                 windowSecs: LiveTraceStore.traceWindowSecs,
@@ -133,29 +126,8 @@ public struct DashboardRootView: View {
         }
     }
 
-    /// Display names of the agents currently withheld from the limits
-    /// surface, for the card's "N hidden" note.
-    private var hiddenLimitNames: [String] {
-        store.agentsHiddenFromLimits
-            .map { ClientRegistry.style(for: $0).shortName }
-            .sorted()
-    }
-
-    // A tab survives while the agent reaches either surface, so each half of
-    // the stack is conditional: an agent narrowed to limits has no history to
-    // chart, and one narrowed to usage has no quota tile to show. Rendering
-    // them anyway would put an empty card under a tab the user just narrowed.
     private func clientStack(_ clientId: String, stats: Stats) -> some View {
         VStack(spacing: 12) {
-            if !store.isAgentHiddenFromLimits(clientId) {
-                AgentLimitsCard(
-                    clients: [clientId],
-                    agentUsage: store.visibleAgentUsage,
-                    liveClientIds: liveClientIds,
-                    title: "\(ClientRegistry.style(for: clientId).displayName) 限额",
-                    note: "会话 / 周限额 / 模型限额",
-                    includeUnlistedAgents: false)
-            }
             // `presentClients` is already the year's usage clients minus the
             // ones hidden from that surface, so it answers both questions at
             // once: an agent whose logs are all in another year would
@@ -170,6 +142,15 @@ public struct DashboardRootView: View {
                     stats: stats)
                 AgentModelCard(clients: [clientId], showCache: true)
                 StreaksCard(streaks: stats.streaks)
+            } else {
+                // A tab can survive on quota alone (e.g. Cursor with the
+                // cursor.com opt-in); with the limits card gone something
+                // has to explain the empty tab.
+                Text("此 Agent 只有配额信息，没有本地用量记录")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 90)
             }
         }
     }
