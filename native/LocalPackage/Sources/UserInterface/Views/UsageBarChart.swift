@@ -92,16 +92,20 @@ struct UsageBarChart: View {
                     Text("暂无数据")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 60)
                 } else {
-                    PieChartView(slices: slices, size: 200)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Height follows the content: the legend grows a row per
+                    // model, and a fixed 200pt frame pushed those rows out
+                    // under the card below.
+                    PieChartView(slices: slices, size: 180)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
                 }
             } else {
                 EmptyView()
             }
         }
-        .frame(height: Self.chartHeight)
     }
 
     // MARK: - Hidden-agent note

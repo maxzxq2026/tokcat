@@ -208,7 +208,9 @@ struct ModelBarChartView: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .lineLimit(1)
-                .frame(width: 92, alignment: .trailing)
+                // "357.9M · 缓存92% · 3539次" needs ~150pt at this size; the
+                // old 92pt cell truncated the cache rate into "缓存 9…".
+                .frame(width: 170, alignment: .trailing)
         }
     }
 

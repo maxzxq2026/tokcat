@@ -85,13 +85,26 @@ enum PieSliceBuilder {
         if clientIds.count == 1 {
             let models = StatsBuilder.aggregateByModel(
                 payload.contributions, clients: Set(clientIds), month: month)
-            let colors = ModelChartPalette.colors(for: models.map(\.model))
-            return zip(models, colors).map { model, color in
-                PieSlice(
-                    id: model.model,
-                    label: model.model == "unknown" ? "未知模型" : model.model,
-                    value: model.tokens,
-                    color: color)
+            // More than 8 legend rows stretch the card absurdly long: keep
+            // the top 7 and fold the tail into one "其他" slice.
+            var shown = models
+            var tailTokens: Int64 = 0
+            if models.count > 8 {
+                tailTokens = models.dropFirst(7).reduce(Int64(0)) { $0 + $1.tokens }
+                shown = Array(models.prefix(7))
+            }
+            var labels = shown.map { $0.model == "unknown" ? "未知模型" : $0.model }
+            var colors = ModelChartPalette.colors(for: shown.map(\.model))
+            if tailTokens > 0 {
+                shown.append(ModelAggregate(
+                    model: "其他", tokens: tailTokens, messages: 0,
+                    breakdown: TokenBreakdown()))
+                labels.append("其他")
+                colors.append(Color(hex: "#6b7280"))
+            }
+            return zip(shown, zip(labels, colors)).map { model, labelAndColor in
+                PieSlice(id: model.model, label: labelAndColor.0,
+                         value: model.tokens, color: labelAndColor.1)
             }
         }
 
@@ -175,6 +188,7 @@ struct PieChartView: View {
                     Text(slice.label)
                         .font(.system(size: 11, weight: .medium))
                         .lineLimit(1)
+                        .truncationMode(.middle)
                     Spacer(minLength: 8)
                     Text(String(format: "%.1f%%",
                                 Double(slice.value) / Double(total) * 100))
@@ -182,9 +196,12 @@ struct PieChartView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                .frame(width: size + 60, alignment: .leading)
+                // Column width tracks the card, not the pie: a fixed
+                // pie-relative width clipped long model ids at both ends.
+                .frame(maxWidth: 360, alignment: .leading)
                 .help("\(slice.label): \(Formatters.humanizeTokens(slice.value))")
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
