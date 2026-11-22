@@ -47,6 +47,23 @@ public struct Stats: Sendable, Equatable {
     public var maxTokens: Int64
 }
 
+/// Per-model usage rollup behind the model-share pie and the per-agent
+/// model card (port of src/lib/stats.ts `aggregateByModel`).
+public struct ModelAggregate: Sendable, Equatable {
+    public var model: String
+    public var tokens: Int64
+    public var messages: Int64
+    public var breakdown: TokenBreakdown
+
+    public init(model: String, tokens: Int64, messages: Int64,
+                breakdown: TokenBreakdown) {
+        self.model = model
+        self.tokens = tokens
+        self.messages = messages
+        self.breakdown = breakdown
+    }
+}
+
 public enum StatsBuilder {
     public static func computeStats(_ payload: UsagePayload,
                                     selectedClients: Set<String>) -> Stats {
@@ -102,6 +119,45 @@ public enum StatsBuilder {
             years: payload.years,
             maxTokens: maxTokens
         )
+    }
+
+    /// Aggregates contributions by modelId. `clients` nil = every client;
+    /// `month` 1…12 filters to that month, nil/0 = all months. Day keys are
+    /// UTC dates (dateFromTimestampMs), so the month is read straight from
+    /// the string — a Date parse would shift the bucket by the local zone.
+    /// Sorted by tokens, descending.
+    public static func aggregateByModel(
+        _ contributions: [Contribution],
+        clients: Set<String>? = nil,
+        month: Int? = nil
+    ) -> [ModelAggregate] {
+        var map: [String: ModelAggregate] = [:]
+        for contribution in contributions {
+            if let month, month > 0, monthComponent(contribution.date) != month {
+                continue
+            }
+            for cc in contribution.clients {
+                if let clients, !clients.contains(cc.client) { continue }
+                let model = cc.modelId.isEmpty ? "unknown" : cc.modelId
+                var entry = map[model] ?? ModelAggregate(
+                    model: model, tokens: 0, messages: 0, breakdown: TokenBreakdown())
+                entry.tokens += cc.tokens.total
+                entry.messages += cc.messages
+                entry.breakdown.input += cc.tokens.input
+                entry.breakdown.output += cc.tokens.output
+                entry.breakdown.cacheRead += cc.tokens.cacheRead
+                entry.breakdown.cacheWrite += cc.tokens.cacheWrite
+                entry.breakdown.reasoning += cc.tokens.reasoning
+                map[model] = entry
+            }
+        }
+        return map.values.sorted { $0.tokens > $1.tokens }
+    }
+
+    /// "2026-07-15" → 7.
+    private static func monthComponent(_ date: String) -> Int? {
+        guard date.count >= 7 else { return nil }
+        return Int(date.dropFirst(5).prefix(2))
     }
 }
 
