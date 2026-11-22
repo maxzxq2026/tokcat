@@ -71,6 +71,7 @@ struct HeaderBar: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                 yearSelect
+                monthSelect
             }
 
             Spacer(minLength: 8)
@@ -142,6 +143,39 @@ struct HeaderBar: View {
                 items: store.years.map { .init(title: $0, checked: $0 == store.selectedYear) },
                 onSelect: { store.selectedYear = $0 })
         }
+    }
+
+    // Fork addition (port of the React fork's month picker): scopes the
+    // model-share pie and the per-agent model card to one month, or the
+    // whole year. Same styled-text + NSMenu treatment as the year select —
+    // SwiftUI Menu cannot open inside the tray panel on macOS 13.
+    private var monthSelect: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+            Text(monthLabel)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8, weight: .bold))
+        }
+        .foregroundStyle(mode.accent)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            AppKitMenu.present(
+                items: [AppKitMenu.Item(
+                    title: "全年",
+                    checked: store.selectedMonth == 0,
+                    value: "0")]
+                    + (1...12).map { month in
+                        AppKitMenu.Item(
+                            title: "\(month)月",
+                            checked: store.selectedMonth == month,
+                            value: String(month))
+                    },
+                onSelect: { store.selectedMonth = Int($0) ?? 0 })
+        }
+    }
+
+    private var monthLabel: String {
+        store.selectedMonth == 0 ? "· 全年" : "· \(store.selectedMonth)月"
     }
 
     // .theme-select: subtle gray chip — 13px text on --control-bg with a

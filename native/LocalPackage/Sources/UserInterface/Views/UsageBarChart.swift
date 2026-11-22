@@ -47,7 +47,9 @@ struct UsageBarChart: View {
 
             StatsRow(stats: stats)
 
-            if is3D {
+            if store.usageView == "pie" {
+                pieSection
+            } else if is3D {
                 ContributionGraph3D(
                     grid: ContributionGrid.buildGrid(
                         year: store.selectedYear,
@@ -73,6 +75,34 @@ struct UsageBarChart: View {
     }
 
     private var theme: ThemePalette { Themes.theme(named: store.themeName) }
+
+    // MARK: - Model-share pie ("占比" view)
+
+    /// The pie replaces the bars in this view: a single-agent card shows
+    /// that agent's model share, the overview shows the per-agent share
+    /// (UsageBarGraph2D.tsx pieSegments). Month scope follows the header's
+    /// month picker (0 = the whole year).
+    @ViewBuilder
+    private var pieSection: some View {
+        Group {
+            if let payload = store.payload {
+                let slices = PieSliceBuilder.slices(
+                    clientIds: clientIds, payload: payload, month: store.selectedMonth)
+                if slices.isEmpty {
+                    Text("暂无数据")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    PieChartView(slices: slices, size: 200)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            } else {
+                EmptyView()
+            }
+        }
+        .frame(height: Self.chartHeight)
+    }
 
     // MARK: - Hidden-agent note
 
@@ -102,8 +132,9 @@ struct UsageBarChart: View {
     // fully above the short control, right-aligned (.kbd-pin-toggle).
     private var viewToggle: some View {
         HStack(spacing: 2) {
-            segButton("2D", tag: "2d")
+            segButton("用量", tag: "2d")
             segButton("3D", tag: "3d")
+            segButton("占比", tag: "pie")
         }
         .padding(2)
         .background(

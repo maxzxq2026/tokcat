@@ -66,7 +66,7 @@ public enum TauriMigration {
         if let theme = imported.theme, !theme.isEmpty {
             defaults.set(theme, forKey: "tokcat.theme.v1")
         }
-        if let view = imported.usageView, view == "2d" || view == "3d" {
+        if let view = imported.usageView, view == "2d" || view == "3d" || view == "pie" {
             defaults.set(view, forKey: "tokcat.usageView.v1")
         }
     }

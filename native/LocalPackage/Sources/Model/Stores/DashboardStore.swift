@@ -91,6 +91,19 @@ public final class DashboardStore: ObservableObject {
     @Published public var usageView: String {
         didSet { defaults.set(usageView, forKey: Keys.usageView) }
     }
+    /// Month filter for the model-share pie and the per-agent model card:
+    /// 1…12, or 0 for the whole year. Defaults to the current UTC month
+    /// like the fork's Tauri build (`useState(new Date().getMonth() + 1)`)
+    /// and is deliberately not persisted — a per-session view choice.
+    @Published public var selectedMonth: Int = DashboardStore.currentUTCMonth()
+
+    /// The current month in UTC, matching the date buckets the collector
+    /// emits (dateFromTimestampMs is UTC in this fork).
+    static func currentUTCMonth() -> Int {
+        let parts = Formatters.isoDate(Date()).split(separator: "-")
+        guard parts.count > 1 else { return 0 }
+        return Int(parts[1]) ?? 0
+    }
     @Published public var settings: AppSettings {
         didSet {
             persistSettings()
