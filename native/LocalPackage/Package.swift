@@ -67,6 +67,20 @@ let package = Package(
             dependencies: ["Collector", "DataSource"],
             swiftSettings: swiftSettings
         ),
+        // The menubar app's @main entry. Sources/tokcat-app/AppMain.swift is
+        // a symlink to ../../Tokcat/TokcatApp.swift — the file stays where
+        // XcodeGen's app target (native/project.yml) expects it; this target
+        // only exists so scripts/build-local-app.sh can produce a runnable
+        // Tokcat.app with the bare Command Line Tools, no Xcode required.
+        .executableTarget(
+            name: "tokcat",
+            dependencies: ["Model", "UserInterface"],
+            path: "Sources/tokcat-app",
+            // The XcodeGen app target compiles TokcatApp.swift in language
+            // mode 5 (SWIFT_VERSION "5.0"); match it or strict concurrency
+            // rejects the MainActor hand-off around the panel factory.
+            swiftSettings: swiftSettings + [.swiftLanguageMode(.v5)]
+        ),
         .testTarget(
             name: "CollectorTests",
             dependencies: ["Collector"],
