@@ -111,10 +111,10 @@ struct UsageBarChart: View {
     /// disagrees with what the user remembers spending. Settings › Agents is
     /// where it gets changed.
     private var subtitleText: String {
-        let base = is3D ? "Full year" : subtitle
+        let base = is3D ? "全年" : subtitle
         let hidden = store.agentsHiddenFromUsage.count
         guard showsHiddenNote, hidden > 0 else { return base }
-        return "\(base) · \(hidden) hidden"
+        return "\(base) · 隐藏 \(hidden) 个"
     }
 
     private var hiddenAgentsHelp: String {
@@ -122,8 +122,8 @@ struct UsageBarChart: View {
             .map { ClientRegistry.style(for: $0).shortName }
             .sorted()
         guard showsHiddenNote, !names.isEmpty else { return "" }
-        return "Excluded from these totals: \(names.joined(separator: ", "))"
-            + "\nChange this in Settings › Agents."
+        return "已从这些合计中排除：\(names.joined(separator: "、"))"
+            + "\n在 设置 › Agents 中修改。"
     }
 
     // Port of the .bar2d-viewtoggle 2D/3D button pair: a bordered pill of two

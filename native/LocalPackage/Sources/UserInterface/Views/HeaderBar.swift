@@ -67,7 +67,7 @@ struct HeaderBar: View {
                 Text(Formatters.humanizeTokens(store.overviewStats?.totalTokens ?? 0))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(mode.accent)
-                Text("tokens used in")
+                Text("Token")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                 yearSelect
@@ -107,7 +107,7 @@ struct HeaderBar: View {
                 }
             }
             .buttonStyle(.borderless)
-            .help("Refresh")
+            .help("刷新")
             .kbdPin("⌘R", visible: keys.cmdHeld)
             .onChange(of: isRefreshing) { refreshing in
                 spinStartedAt = refreshing ? Date() : nil
@@ -120,7 +120,7 @@ struct HeaderBar: View {
                     .font(.system(size: 12, weight: .semibold))
             }
             .buttonStyle(.borderless)
-            .help("Settings")
+            .help("设置")
             .kbdPin("⌘,", visible: keys.cmdHeld)
         }
     }

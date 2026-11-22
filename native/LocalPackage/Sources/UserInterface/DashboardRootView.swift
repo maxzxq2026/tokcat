@@ -81,7 +81,7 @@ public struct DashboardRootView: View {
             statusBox {
                 ProgressView()
                     .controlSize(.small)
-                Text("Collecting usage from local logs…")
+                Text("正在从本地日志收集用量…")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -89,13 +89,13 @@ public struct DashboardRootView: View {
             statusBox {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
-                Text("Error: \(error)")
+                Text("错误：\(error)")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
         } else {
             statusBox {
-                Text("No usage data found yet.")
+                Text("还没有用量数据。")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -113,8 +113,8 @@ public struct DashboardRootView: View {
     private func overviewStack(_ stats: Stats) -> some View {
         VStack(spacing: 12) {
             UsageBarChart(
-                title: "Token Usage",
-                subtitle: "Stacked by agent",
+                title: "Token 用量",
+                subtitle: "按 Agent 堆叠",
                 bars: store.overviewBars,
                 clientIds: store.presentClients,
                 stats: stats,
@@ -152,8 +152,8 @@ public struct DashboardRootView: View {
                     clients: [clientId],
                     agentUsage: store.visibleAgentUsage,
                     liveClientIds: liveClientIds,
-                    title: "\(ClientRegistry.style(for: clientId).displayName) limits",
-                    note: "Session / weekly / model limits",
+                    title: "\(ClientRegistry.style(for: clientId).displayName) 限额",
+                    note: "会话 / 周限额 / 模型限额",
                     includeUnlistedAgents: false)
             }
             // `presentClients` is already the year's usage clients minus the
@@ -163,8 +163,8 @@ public struct DashboardRootView: View {
             // tab it only owns because of its limits tile.
             if store.presentClients.contains(clientId) {
                 UsageBarChart(
-                    title: "Token Usage",
-                    subtitle: "Local token history",
+                    title: "Token 用量",
+                    subtitle: "本地 Token 历史",
                     bars: store.activeBars,
                     clientIds: [clientId],
                     stats: stats)

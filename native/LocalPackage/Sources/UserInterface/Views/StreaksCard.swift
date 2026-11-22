@@ -10,10 +10,10 @@ struct StreaksCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            CardHeading(text: "Streaks")
+            CardHeading(text: "连续记录")
             HStack(spacing: 0) {
-                item(value: streaks.longest, label: "Longest")
-                item(value: streaks.current, label: "Current")
+                item(value: streaks.longest, label: "最长")
+                item(value: streaks.current, label: "当前")
             }
         }
         .padding(14)
@@ -26,7 +26,7 @@ struct StreaksCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(value)")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                Text("days")
+                Text("天")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }

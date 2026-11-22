@@ -12,7 +12,7 @@ public struct UsageTraceCard: View {
     let title: String
 
     public init(buckets: [TraceRow], windowSecs: Int64 = 600,
-                detailed: Bool, title: String = "Live session") {
+                detailed: Bool, title: String = "实时会话") {
         self.buckets = buckets
         self.windowSecs = windowSecs
         self.detailed = detailed
@@ -42,13 +42,13 @@ public struct UsageTraceCard: View {
             HStack(alignment: .firstTextBaseline) {
                 CardHeading(text: title)
                 Spacer()
-                Text("last \(windowMin)m · \(Formatters.humanizeTokens(totalRate.rounded()))/m total")
+                Text("最近 \(windowMin) 分钟 · 共 \(Formatters.humanizeTokens(totalRate.rounded()))/分钟")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
             if top.isEmpty {
-                Text("No activity in this window")
+                Text("当前窗口无活动")
                     .font(.system(size: 12))
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)

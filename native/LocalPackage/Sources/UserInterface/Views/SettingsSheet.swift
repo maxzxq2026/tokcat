@@ -18,13 +18,13 @@ struct SettingsSheet: View {
 
     // Sample labels mirror TRAY_MODE_LABELS in src/lib/settings.ts.
     private static let trayModeLabels: [(TrayMode, String)] = [
-        (.todayTokens, "Today's tokens (50M)"),
-        (.todayCost, "Today's cost ($5.20)"),
-        (.totalTokens, "Total tokens (1.5B)"),
-        (.totalCost, "Total cost ($889)"),
-        (.tokensPerMin, "Tokens / min (12.4K/m)"),
-        (.planPercent, "Plan usage (42%)"),
-        (.hidden, "Icon only"),
+        (.todayTokens, "今日 Token（50M）"),
+        (.todayCost, "今日费用（$5.20）"),
+        (.totalTokens, "总 Token（1.5B）"),
+        (.totalCost, "总费用（$889）"),
+        (.tokensPerMin, "每分钟 Token（12.4K/m）"),
+        (.planPercent, "套餐用量（42%）"),
+        (.hidden, "仅图标"),
     ]
 
     var body: some View {
@@ -35,7 +35,7 @@ struct SettingsSheet: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    Text("Settings")
+                    Text("设置")
                         .font(.system(size: 14, weight: .bold))
                     Spacer()
                     Button {
@@ -88,7 +88,7 @@ struct SettingsSheet: View {
     // MARK: - Sections
 
     private var menubarTitleSection: some View {
-        section(label: "Menubar title") {
+        section(label: "菜单栏标题") {
             ForEach(Self.trayModeLabels, id: \.0) { mode, label in
                 radioRow(label: label, active: store.settings.trayMode == mode) {
                     store.settings.trayMode = mode
@@ -101,7 +101,7 @@ struct SettingsSheet: View {
 
     // Mirror of PLAN_PROVIDER_OPTIONS in SettingsPanel.tsx.
     private static let planProviderOptions: [(PlanProvider, String)] = [
-        (.auto, "Auto — most constrained"),
+        (.auto, "自动 — 最受限"),
         (.claude, "Claude"),
         (.codex, "Codex"),
         (.grok, "Grok"),
@@ -144,7 +144,7 @@ struct SettingsSheet: View {
 
     private var planSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            section(label: "Plan source") {
+            section(label: "套餐来源") {
                 ForEach(Self.planProviderOptions, id: \.0) { provider, label in
                     // Specific providers are only selectable once their
                     // quota has loaded; Auto is always available.
@@ -152,7 +152,7 @@ struct SettingsSheet: View {
                         || planSnapshots[provider.rawValue] != nil
                     disableableRadioRow(
                         label: label,
-                        meta: available ? nil : "no data yet",
+                        meta: available ? nil : "暂无数据",
                         active: store.settings.planProvider == provider,
                         disabled: !available
                     ) {
@@ -165,7 +165,7 @@ struct SettingsSheet: View {
                 group {
                     let labels = windowLabels(for: store.settings.planProvider)
                     if labels.isEmpty {
-                        Text("No windows available yet")
+                        Text("还没有可用窗口")
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 10)
@@ -182,12 +182,12 @@ struct SettingsSheet: View {
                 }
             }
 
-            section(label: "Display") {
-                radioRow(label: "% used",
+            section(label: "显示") {
+                radioRow(label: "已用百分比",
                          active: store.settings.planDisplayMode == .used) {
                     store.settings.planDisplayMode = .used
                 }
-                radioRow(label: "% left",
+                radioRow(label: "剩余百分比",
                          active: store.settings.planDisplayMode == .left) {
                     store.settings.planDisplayMode = .left
                 }
@@ -198,14 +198,14 @@ struct SettingsSheet: View {
     // MARK: - Cursor usage (opt-in event fetch + live poll from cursor.com)
 
     private var cursorUsageSection: some View {
-        section(label: "Cursor usage") {
+        section(label: "Cursor 用量") {
             toggleRow(
-                label: "Fetch from cursor.com",
+                label: "从 cursor.com 拉取",
                 isOn: Binding(
                     get: { store.settings.cursorUsage },
                     set: { setCursorUsage($0) }),
                 disabled: cursorUsageBusy)
-            Text("Loads history and polls live usage with your Cursor session. Polling pauses when Cursor IDE and Cursor CLI are both quit.")
+            Text("使用你的 Cursor 会话加载历史并轮询实时用量。Cursor IDE 和 Cursor CLI 都退出时轮询暂停。")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 10)
@@ -260,19 +260,19 @@ struct SettingsSheet: View {
                     Button {
                         store.showAllAgents()
                     } label: {
-                        Text("Show all")
+                        Text("全部显示")
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Color.accentColor)
                     }
                     .buttonStyle(.plain)
-                    .help("Show every agent on both surfaces again")
+                    .help("让所有 Agent 重新出现在两个界面上")
                 }
             }
             .padding(.leading, 4)
 
             group {
                 if store.knownAgents.isEmpty {
-                    Text("No agents detected yet")
+                    Text("还没有检测到 Agent")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 10)
@@ -285,10 +285,9 @@ struct SettingsSheet: View {
                 }
             }
 
-            Text("Token counts are the last \(DashboardStore.recentWindowDays) "
-                 + "days. Usage covers the token chart, its totals and the "
-                 + "streaks; limits covers the OAuth quota tile. An agent "
-                 + "switched off loses both, and its tab with them.")
+            Text("Token 数量为最近 \(DashboardStore.recentWindowDays) 天。"
+                 + "用量覆盖 token 图表、合计与连续记录；限额覆盖 OAuth 配额块。"
+                 + "关闭一个 Agent 会同时移除两者及其标签页。")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -298,9 +297,9 @@ struct SettingsSheet: View {
 
     private static func scopeLabel(_ scope: AgentSurfaceScope) -> String {
         switch scope {
-        case .usageAndLimits: return "Usage & limits"
-        case .usageOnly: return "Usage only"
-        case .limitsOnly: return "Limits only"
+        case .usageAndLimits: return "用量与限额"
+        case .usageOnly: return "仅用量"
+        case .limitsOnly: return "仅限额"
         }
     }
 
@@ -314,14 +313,14 @@ struct SettingsSheet: View {
         // Abbreviated because the name column is ~138pt: spelling the window
         // out truncates the count itself away for six-digit values like
         // "203.2M". The section footnote carries the long form.
-        let window = "\(DashboardStore.recentWindowDays)d"
+        let window = "\(DashboardStore.recentWindowDays)天"
         let recent = store.recentTokens[id] ?? 0
         if recent > 0 {
-            return "\(Formatters.humanizeTokens(recent)) tokens · \(window)"
+            return "\(Formatters.humanizeTokens(recent)) Token · \(window)"
         }
         return (store.allTimeTokens[id] ?? 0) > 0
-            ? "no usage · \(window)"
-            : "no local usage"
+            ? "无用量 · \(window)"
+            : "无本地用量"
     }
 
     private func agentRow(_ id: String) -> some View {
@@ -346,7 +345,7 @@ struct SettingsSheet: View {
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .help("Show \(style.displayName) on the dashboard")
+                .help("在面板上显示 \(style.displayName)")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -436,25 +435,25 @@ struct SettingsSheet: View {
         id: String, style: ClientStyle, enabled: Bool, options: [AgentSurfaceScope]
     ) -> String {
         guard enabled else {
-            return "Switch \(style.displayName) on to choose where it appears"
+            return "打开 \(style.displayName) 才能选择它出现的位置"
         }
         guard options.count > 1 else {
             switch (store.hasUsageSurface(id), store.hasLimitsSurface(id)) {
             case (false, true):
-                return "\(style.displayName) reports plan limits but has no local token history"
+                return "\(style.displayName) 上报套餐限额，但没有本地 token 历史"
             case (true, false):
-                return "\(style.displayName) has no plan limits to report, so it only appears in usage"
+                return "\(style.displayName) 没有可上报的套餐限额，因此只出现在用量里"
             default:
-                return "\(style.displayName) is not on the dashboard right now"
+                return "\(style.displayName) 当前不在面板上"
             }
         }
-        return "Where \(style.displayName) appears"
+        return "\(style.displayName) 显示在哪里"
     }
 
     private var startupSection: some View {
-        section(label: "Startup") {
+        section(label: "启动") {
             toggleRow(
-                label: "Launch at login",
+                label: "登录时启动",
                 isOn: Binding(
                     get: { store.settings.autostart },
                     set: { store.setAutostart($0) }),
@@ -470,18 +469,18 @@ struct SettingsSheet: View {
     }
 
     private var menubarIconSection: some View {
-        section(label: "Menubar icon") {
+        section(label: "菜单栏图标") {
             toggleRow(
-                label: "Animate based on token usage",
+                label: "根据 Token 用量播放动画",
                 isOn: Binding(
                     get: { store.settings.animateTray },
                     set: { store.settings.animateTray = $0 }))
             if store.settings.animateTray {
-                radioRow(label: "Spinning cat",
+                radioRow(label: "旋转猫",
                          active: store.settings.animationStyle == .cat) {
                     store.settings.animationStyle = .cat
                 }
-                radioRow(label: "Party parrot",
+                radioRow(label: "派对鹦鹉",
                          active: store.settings.animationStyle == .parrot) {
                     store.settings.animationStyle = .parrot
                 }
@@ -490,9 +489,9 @@ struct SettingsSheet: View {
     }
 
     private var liveTraceSection: some View {
-        section(label: "Live trace") {
+        section(label: "实时追踪") {
             toggleRow(
-                label: "Split by agent / model",
+                label: "按 Agent / 模型拆分",
                 isOn: Binding(
                     get: { store.settings.detailedTrace },
                     set: { store.settings.detailedTrace = $0 }))
@@ -500,9 +499,9 @@ struct SettingsSheet: View {
     }
 
     private var aboutSection: some View {
-        section(label: "About") {
+        section(label: "关于") {
             HStack {
-                Text("Version")
+                Text("版本")
                     .font(.system(size: 12))
                 Spacer()
                 Text(store.appVersion)
@@ -519,7 +518,7 @@ struct SettingsSheet: View {
                 updates.checkForUpdates()
             } label: {
                 HStack {
-                    Text("Check for updates…")
+                    Text("检查更新…")
                         .font(.system(size: 12))
                     Spacer()
                 }
@@ -537,7 +536,7 @@ struct SettingsSheet: View {
         Button {
             NSApp.terminate(nil)
         } label: {
-            Text("Quit Tokcat")
+            Text("退出 Tokcat")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.red)
                 .frame(maxWidth: .infinity)

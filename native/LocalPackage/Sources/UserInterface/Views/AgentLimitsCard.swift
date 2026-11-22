@@ -13,8 +13,8 @@ struct AgentLimitsCard: View {
     var agentUsage: AgentUsagePayload?
     /// Clients with tokens flowing right now (drives the "Live" status).
     var liveClientIds: Set<String> = []
-    var title: String = "Agent limits"
-    var note: String = "OAuth quota"
+    var title: String = "Agent 限额"
+    var note: String = "OAuth 配额"
     /// Client tabs show only their own agent; the overview also folds in
     /// agents that report quota but have no local logs yet.
     var includeUnlistedAgents: Bool = true
@@ -26,11 +26,11 @@ struct AgentLimitsCard: View {
     /// Placeholder rows while OAuth quota is loading; real windows come from
     /// the providers (mirror of LIMIT_ROWS in AgentLimitsCard.tsx:21-31).
     private static let limitRows: [String: [String]] = [
-        "codex": ["Session", "Weekly"],
-        "claude": ["Session", "Weekly"],
+        "codex": ["会话", "周限额"],
+        "claude": ["会话", "周限额"],
         "gemini": ["Pro", "Flash"],
-        "grok": ["Monthly"],
-        "cursor": ["Cursor Models", "Other Models"],
+        "grok": ["月限额"],
+        "cursor": ["Cursor 模型", "其他模型"],
     ]
 
     private var snapshots: [String: AgentUsageSnapshot] {
@@ -67,15 +67,15 @@ struct AgentLimitsCard: View {
                 Spacer()
                 Text(hiddenAgentNames.isEmpty
                      ? note
-                     : "\(note) · \(hiddenAgentNames.count) hidden")
+                     : "\(note) · 隐藏 \(hiddenAgentNames.count) 个")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .help(hiddenAgentNames.isEmpty ? "" : hiddenHelp)
             }
             if visible.isEmpty {
                 Text(hiddenAgentNames.isEmpty
-                     ? "No supported agents yet"
-                     : "Every agent is hidden here — Settings › Agents brings them back")
+                     ? "还没有支持的 Agent"
+                     : "所有 Agent 都在此隐藏 —— 在 设置 › Agents 中找回")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
@@ -173,8 +173,8 @@ struct AgentLimitsCard: View {
     }
 
     private var hiddenHelp: String {
-        "Hidden from limits: \(hiddenAgentNames.joined(separator: ", "))"
-            + "\nChange this in Settings › Agents."
+        "已从限额中隐藏：\(hiddenAgentNames.joined(separator: "、"))"
+            + "\n在 设置 › Agents 中修改。"
     }
 
     /// Drawn brand glyph (clients.ts marks), falling back to the colored
@@ -189,7 +189,7 @@ struct AgentLimitsCard: View {
         label: String, remaining: Double?, resetText: String?, color: Color
     ) -> some View {
         let fill = min(100.0, max(0.0, remaining ?? 0))
-        let leftText = remaining.map { "\(Int(max(0, $0).rounded()))% left" } ?? "No data"
+        let leftText = remaining.map { "剩 \(Int(max(0, $0).rounded()))%" } ?? "暂无数据"
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(label)
@@ -240,7 +240,7 @@ struct AgentLimitsCard: View {
               let readAt = readAtParser.date(from: snapshot.updatedAt)
         else { return error }
         let ago = ageFormatter.localizedString(for: readAt, relativeTo: Date())
-        let note = "Last reading \(ago) — the numbers above are from then."
+        let note = "上次读取于 \(ago) —— 以上数字来自当时。"
         return error.isEmpty ? note : "\(error)\n\(note)"
     }
 
@@ -248,13 +248,13 @@ struct AgentLimitsCard: View {
         // Stale outranks Error: the tile is still showing numbers, and
         // saying only "Error" next to them would read as their being wrong
         // rather than old.
-        if snapshot?.stale == true { return "Stale" }
-        if snapshot?.error != nil { return "Error" }
+        if snapshot?.stale == true { return "过期" }
+        if snapshot?.error != nil { return "错误" }
         if let windows = snapshot?.windows, !windows.isEmpty {
             return snapshot?.source.uppercased() ?? ""
         }
-        if isLive { return "Live" }
-        return "No quota"
+        if isLive { return "实时" }
+        return "无配额"
     }
 
     private func statusColor(snapshot: AgentUsageSnapshot?, isLive: Bool) -> Color {

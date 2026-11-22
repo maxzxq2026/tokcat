@@ -87,16 +87,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
 
-        menu.addItem(makeItem("Open Tokcat", action: .openTokcat))
-        menu.addItem(makeItem("Settings…", action: .settings, keyEquivalent: ","))
-        menu.addItem(makeItem("Refresh Now", action: .refreshNow, keyEquivalent: "r"))
+        menu.addItem(makeItem("打开 Tokcat", action: .openTokcat))
+        menu.addItem(makeItem("设置…", action: .settings, keyEquivalent: ","))
+        menu.addItem(makeItem("立即刷新", action: .refreshNow, keyEquivalent: "r"))
         menu.addItem(.separator())
-        menu.addItem(makeItem("About Tokcat", action: .about))
-        menu.addItem(makeItem("Check for Updates…", action: .checkForUpdates))
+        menu.addItem(makeItem("关于 Tokcat", action: .about))
+        menu.addItem(makeItem("检查更新…", action: .checkForUpdates))
         menu.addItem(.separator())
 
         let quit = NSMenuItem(
-            title: "Quit Tokcat",
+            title: "退出 Tokcat",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

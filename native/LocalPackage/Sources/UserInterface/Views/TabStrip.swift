@@ -19,7 +19,7 @@ struct TabStrip: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                tab(id: DashboardStore.overviewTab, label: "Overview", index: 0) {
+                tab(id: DashboardStore.overviewTab, label: "总览", index: 0) {
                     Image(systemName: "square.grid.2x2.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)

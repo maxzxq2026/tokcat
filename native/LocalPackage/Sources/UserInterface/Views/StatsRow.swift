@@ -20,18 +20,18 @@ struct StatsRow: View {
         HStack(spacing: 0) {
             cell(
                 num: Formatters.formatCost(stats.totalCost),
-                label: "Total",
+                label: "合计",
                 sub: "\(Formatters.formatMMDD(stats.dateRange.start)) → "
                     + Formatters.formatMMDD(stats.dateRange.end))
             divider
             cell(
                 num: Formatters.humanizeTokens(stats.totalTokens),
-                label: "Tokens",
-                sub: "\(stats.activeDays) active days")
+                label: "Token",
+                sub: "活跃 \(stats.activeDays) 天")
             divider
             cell(
                 num: stats.bestDay.map { Formatters.formatCost($0.cost) } ?? "$0.00",
-                label: "Best day",
+                label: "峰值日",
                 sub: stats.bestDay.map { Formatters.formatMonthDay($0.date) } ?? "—")
         }
     }
