@@ -108,6 +108,8 @@ public struct DashboardRootView: View {
 
     // Overview card order mirrors App.tsx:514-538: chart → limits → live
     // trace → streaks. Client tabs (App.tsx:539-563) have no trace card.
+    // Fork addition: the per-agent model-usage card sits right under the
+    // usage chart, like the React fork's AgentModelCard.
     private func overviewStack(_ stats: Stats) -> some View {
         VStack(spacing: 12) {
             UsageBarChart(
@@ -117,6 +119,7 @@ public struct DashboardRootView: View {
                 clientIds: store.presentClients,
                 stats: stats,
                 showsHiddenNote: true)
+            AgentModelCard(clients: store.dashboardClients)
             AgentLimitsCard(
                 clients: store.limitsClients,
                 agentUsage: store.visibleAgentUsage,
@@ -165,6 +168,7 @@ public struct DashboardRootView: View {
                     bars: store.activeBars,
                     clientIds: [clientId],
                     stats: stats)
+                AgentModelCard(clients: [clientId], showCache: true)
                 StreaksCard(streaks: stats.streaks)
             }
         }
