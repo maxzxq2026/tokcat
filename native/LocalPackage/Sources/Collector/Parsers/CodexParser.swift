@@ -12,6 +12,10 @@ enum CodexParser: UsageParser {
         let env = ProcessInfo.processInfo.environment
 
         var codexHomes = [env["CODEX_HOME"] ?? joinPath(home, ".codex")]
+        // The active model from config.toml overrides whatever the session
+        // files recorded — that value can be stale after a CC Switch
+        // provider change, misattributing tokens to the wrong provider.
+        let configModel = readCodexConfigModel(codexHome: codexHomes[0])
         // Orca runs Codex with CODEX_HOME redirected to its own runtime home;
         // scan Orca's known Codex homes so sessions started inside Orca count.
         codexHomes.append(contentsOf: orcaCodexHomes(home))
@@ -43,8 +47,50 @@ enum CodexParser: UsageParser {
         // The delta state machine below is per-file, so files parse
         // independently; parseFilesInOrder keeps the root/path order the
         // downstream first-wins dedup depends on.
-        return parseFilesInOrder(files, cache: cache, parseCodexFile)
+        return parseFilesInOrder(files, cache: cache) {
+            parseCodexFile($0, configModel: configModel)
+        }
     }
+}
+
+/// Read the top-level `model` key from the given Codex home's config.toml.
+/// Only top-level keys count (the scan stops at the first section header).
+/// Returns nil when the file is absent or unreadable. Port of
+/// read_codex_config_model (usage_graph.rs).
+func readCodexConfigModel(codexHome: String) -> String? {
+    guard
+        let data = FileManager.default.contents(
+            atPath: joinPath(codexHome, "config.toml")),
+        let content = String(data: data, encoding: .utf8)
+    else { return nil }
+    for rawLine in content.split(separator: "\n", omittingEmptySubsequences: false) {
+        let line = rawLine.hasSuffix("\r") ? rawLine.dropLast() : rawLine[...]
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        // Stop at the first section header; only top-level keys matter.
+        if trimmed.hasPrefix("[") { break }
+        guard trimmed.hasPrefix("model") else { continue }
+        let value = trimmed.dropFirst("model".count).trimmingCharacters(in: .whitespaces)
+        guard value.hasPrefix("=") else { continue }
+        // Only double quotes are stripped, exactly like the Rust port.
+        let raw = value.dropFirst()
+            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            .trimmingCharacters(in: .whitespaces)
+        if !raw.isEmpty && raw != "model" {
+            return String(raw)
+        }
+    }
+    return nil
+}
+
+/// The config.toml model for the primary Codex home ($CODEX_HOME or
+/// ~/.codex). The live tailer re-reads it every tick so a provider switch
+/// shows up without a restart; the graph parser reads it once per scan.
+public func codexConfigModelOverride() -> String? {
+    guard let home = homeDir() else { return nil }
+    let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"]
+        ?? joinPath(home, ".codex")
+    return readCodexConfigModel(codexHome: codexHome)
 }
 
 struct CodexTotals: Equatable {
@@ -115,7 +161,7 @@ struct CodexTotals: Equatable {
     }
 }
 
-@Sendable func parseCodexFile(_ path: String) -> [UsageMessage] {
+@Sendable func parseCodexFile(_ path: String, configModel: String? = nil) -> [UsageMessage] {
     guard let data = FileManager.default.contents(atPath: path) else { return [] }
     let fallbackTs = fileModifiedTimestampMs(path)
     var currentModel: String?
@@ -176,8 +222,12 @@ struct CodexTotals: Equatable {
             return
         }
         guard let info = payload["info"] else { return }
-        let model =
-            stringValue(info["model"]) ?? stringValue(info["model_name"]) ?? currentModel
+        // The config.toml override wins over the model recorded in the
+        // session file (stale after a CC Switch provider change).
+        let model = configModel
+            ?? stringValue(info["model"])
+            ?? stringValue(info["model_name"])
+            ?? currentModel
             ?? "unknown"
         if model != "unknown" {
             currentModel = model

@@ -164,12 +164,19 @@ public struct UsageTailerConfig: Sendable {
     /// Interval between unpruned walks. `0` makes every tick a full walk,
     /// which is what the pre-pruning tailer did.
     public var fullScanIntervalMs: Int64
+    /// Returns Codex's config.toml `model` override, re-read each tick so a
+    /// CC Switch provider change shows up without a restart. Nil (the test
+    /// default) disables the override entirely so tests stay independent of
+    /// the machine's real ~/.codex.
+    public var codexConfigModelProvider: (@Sendable () -> String?)?
 
     public init(simulatedHome: String? = nil, nowMs: (@Sendable () -> Int64)? = nil,
-                fullScanIntervalMs: Int64 = defaultFullScanIntervalMs) {
+                fullScanIntervalMs: Int64 = defaultFullScanIntervalMs,
+                codexConfigModelProvider: (@Sendable () -> String?)? = nil) {
         self.simulatedHome = simulatedHome
         self.nowMs = nowMs
         self.fullScanIntervalMs = fullScanIntervalMs
+        self.codexConfigModelProvider = codexConfigModelProvider
     }
 }
 
@@ -185,6 +192,10 @@ public actor UsageTailer {
     private var dirMtimes: [String: Int64] = [:]
     /// Files recently written to, re-stat'd every tick regardless of pruning.
     var activeFiles: [String: TailClientKind] = [:]  // internal for tests
+    /// Codex config.toml model override for the current tick (nil = none).
+    /// Refreshed from `config.codexConfigModelProvider` at tick start;
+    /// internal so tests can inject it without a provider.
+    var currentCodexConfigModel: String?
     private var lastFullScanMs: Int64 = 0
     private let config: UsageTailerConfig
 
@@ -194,6 +205,12 @@ public actor UsageTailer {
 
     func now() -> Int64 {
         config.nowMs?() ?? nowMs()
+    }
+
+    /// Test seam: set the tick-scoped Codex config model without a
+    /// provider — actor isolation bars direct cross-actor mutation.
+    func setCurrentCodexConfigModel(_ value: String?) {
+        currentCodexConfigModel = value
     }
 
     // MARK: - Tick (usage_tail.rs:123-210)
@@ -220,6 +237,9 @@ public actor UsageTailer {
     @discardableResult
     public func tick() -> Int {
         var added = 0
+        // Read the Codex config model once per tick so the live trace picks
+        // up provider switches without a restart (usage_tail.rs:122-125).
+        currentCodexConfigModel = config.codexConfigModelProvider?()
         let isCold = cold
         cold = false
         let nowMs = now()
@@ -481,7 +501,10 @@ public actor UsageTailer {
 
         if input + output + cacheRead <= 0 { return false }
 
-        let model = codexModel.map(tailNormalizeModel) ?? "unknown"
+        // The config.toml override wins over the model threaded through the
+        // file state (stale after a CC Switch provider change).
+        let model = (currentCodexConfigModel ?? codexModel)
+            .map(tailNormalizeModel) ?? "unknown"
         let tsMs = value["timestamp"]?.asString.flatMap(rfc3339ToTimestampMs) ?? now()
 
         return pushEvent(

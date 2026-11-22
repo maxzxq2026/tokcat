@@ -48,7 +48,8 @@ public final class LiveTraceStore: ObservableObject {
     private var storeStarted = false
     private var cursorLiveRevision: UInt64 = 0
 
-    public init(tailer: UsageTailer = UsageTailer()) {
+    public init(tailer: UsageTailer = UsageTailer(config: UsageTailerConfig(
+        codexConfigModelProvider: codexConfigModelOverride))) {
         self.tailer = tailer
         self.cursorLive = CursorLiveProvider(tailer: tailer)
     }

@@ -205,6 +205,34 @@ private func grokLine(_ total: Int64, _ model: String?, _ tsMs: Int64) -> String
         #expect(await tailer.files[path]?.codexModel == "gpt-5.3-codex")
     }
 
+    // The tick-scoped config.toml override wins over the model threaded
+    // through file state (stale after a CC Switch provider change).
+    @Test func codexTailConfigModelOverridesSessionModel() async throws {
+        let path = tailTempFile("codex-config-override")
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        let ts = rfc3339Now()
+        let lines = """
+        {"type":"turn_context","timestamp":"\(ts)","payload":{"model":"gpt-5.3-codex"}}
+        {"type":"event_msg","timestamp":"\(ts)","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":100,"output_tokens":10,"cached_input_tokens":30}}}}
+        """
+        try lines.write(toFile: path, atomically: true, encoding: .utf8)
+
+        let tailer = UsageTailer()
+        await tailer.setCurrentCodexConfigModel("mimo-v2.5-pro")
+        let size = UInt64(try FileManager.default
+            .attributesOfItem(atPath: path)[.size] as! Int)
+        let added = await tailer.readGrowth(
+            path: path, client: .codex, start: 0, end: size, mtimeMs: nowMs())
+
+        #expect(added == 1)
+        let events = await tailer.eventsSnapshot()
+        #expect(events.count == 1)
+        #expect(events[0].model == "mimo-v2.5-pro")
+        // The file state still tracks the session-recorded model, so a
+        // later tick without the override falls back to it.
+        #expect(await tailer.files[path]?.codexModel == "gpt-5.3-codex")
+    }
+
     // Streaming retries reuse the msgId:reqId key; the merge takes the
     // per-field max instead of appending (usage_tail.rs:636-658).
     @Test func claudeDedupMergesPerFieldMax() async throws {

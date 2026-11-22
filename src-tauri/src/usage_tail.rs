@@ -142,6 +142,9 @@ impl UsageTailer {
 
     pub fn tick(&self) -> usize {
         let mut added = 0;
+        // Read the Codex config model once per tick so the live trace
+        // picks up model changes without a restart.
+        let codex_config_model = read_codex_config_model();
         let is_cold = {
             let mut c = self.cold.lock();
             let was = *c;
@@ -217,9 +220,15 @@ impl UsageTailer {
                         // we re-baseline instead of treating a new smaller
                         // total as a negative delta.
                         self.files.lock().remove(&path);
-                        added += self.read_growth(&path, client, 0, size, mtime_ms);
+                        added += self.read_growth(
+                            &path, client, 0, size, mtime_ms,
+                            codex_config_model.as_deref(),
+                        );
                     } else {
-                        added += self.read_growth(&path, client, start_offset, size, mtime_ms);
+                        added += self.read_growth(
+                            &path, client, start_offset, size, mtime_ms,
+                            codex_config_model.as_deref(),
+                        );
                     }
                 }
             }
@@ -236,6 +245,7 @@ impl UsageTailer {
         start: u64,
         end: u64,
         mtime_ms: i64,
+        codex_config_model: Option<&str>,
     ) -> usize {
         let mut added = 0;
         let mut file = match fs::File::open(path) {
@@ -285,7 +295,9 @@ impl UsageTailer {
             let grok_emit_first = start == 0;
             let recorded = match client {
                 ClientKind::Claude => self.parse_claude_line(path, trimmed),
-                ClientKind::Codex => self.parse_codex_line(trimmed, &mut codex_model),
+                ClientKind::Codex => {
+                    self.parse_codex_line(trimmed, &mut codex_model, codex_config_model)
+                }
                 ClientKind::Grok => self.parse_grok_line(
                     trimmed,
                     &mut grok_last_total,
@@ -402,7 +414,12 @@ impl UsageTailer {
         )
     }
 
-    fn parse_codex_line(&self, raw: &[u8], codex_model: &mut Option<String>) -> bool {
+    fn parse_codex_line(
+        &self,
+        raw: &[u8],
+        codex_model: &mut Option<String>,
+        codex_config_model: Option<&str>,
+    ) -> bool {
         let value: serde_json::Value = match serde_json::from_slice(raw) {
             Ok(v) => v,
             Err(_) => return false,
@@ -465,9 +482,9 @@ impl UsageTailer {
             return false;
         }
 
-        let model = codex_model
-            .clone()
-            .map(|m| normalize_model(&m))
+        let model = codex_config_model
+            .map(|m| normalize_model(m))
+            .or_else(|| codex_model.clone().map(|m| normalize_model(&m)))
             .unwrap_or_else(|| "unknown".to_string());
 
         let ts_ms = value
@@ -952,7 +969,7 @@ mod tests {
 
         let tailer = UsageTailer::new();
         let size = fs::metadata(&path).unwrap().len();
-        let added = tailer.read_growth(&path, ClientKind::Claude, 0, size, now_ms());
+        let added = tailer.read_growth(&path, ClientKind::Claude, 0, size, now_ms(), None);
 
         assert_eq!(added, 1);
         let trace = tailer.trace(3600);
@@ -973,7 +990,7 @@ mod tests {
 
         let tailer = UsageTailer::new();
         let size = fs::metadata(&path).unwrap().len();
-        let added = tailer.read_growth(&path, ClientKind::Claude, 0, size, now_ms());
+        let added = tailer.read_growth(&path, ClientKind::Claude, 0, size, now_ms(), None);
 
         assert_eq!(added, 0);
         assert_eq!(tailer.files.lock().get(&path).unwrap().offset, 0);
@@ -982,7 +999,7 @@ mod tests {
         fs::write(&path, line).unwrap();
         let size = fs::metadata(&path).unwrap().len();
         let start = tailer.files.lock().get(&path).unwrap().offset;
-        let added = tailer.read_growth(&path, ClientKind::Claude, start, size, now_ms());
+        let added = tailer.read_growth(&path, ClientKind::Claude, start, size, now_ms(), None);
 
         assert_eq!(added, 1);
         assert_eq!(tailer.trace(3600)[0].tokens, 20);
@@ -1013,7 +1030,7 @@ mod tests {
 
         let tailer = UsageTailer::new();
         let size = fs::metadata(&path).unwrap().len();
-        let added = tailer.read_growth(&path, ClientKind::Grok, 0, size, now_ms());
+        let added = tailer.read_growth(&path, ClientKind::Grok, 0, size, now_ms(), None);
 
         // Full-file read (start=0): first total is a delta from 0, then
         // +150 and +50 → 3 events.
@@ -1042,7 +1059,7 @@ mod tests {
         .join("\n");
         fs::write(&path2, live).unwrap();
         let size2 = fs::metadata(&path2).unwrap().len();
-        let added2 = tailer.read_growth(&path2, ClientKind::Grok, 0, size2, now);
+        let added2 = tailer.read_growth(&path2, ClientKind::Grok, 0, size2, now, None);
         // first 100 from 0 + 80 growth
         assert_eq!(added2, 2);
         let trace = tailer.trace(3600);
@@ -1075,7 +1092,7 @@ mod tests {
             );
         }
         let size3 = fs::metadata(&path3).unwrap().len();
-        let added3 = tailer.read_growth(&path3, ClientKind::Grok, 0, size3, now);
+        let added3 = tailer.read_growth(&path3, ClientKind::Grok, 0, size3, now, None);
         // 500==seed skip; 120/200 ignored; 520 → +20 only.
         assert_eq!(added3, 1);
         assert_eq!(
@@ -1087,4 +1104,31 @@ mod tests {
         let _ = fs::remove_file(path2);
         let _ = fs::remove_file(path3);
     }
+}
+
+/// Read the top-level `model` key from Codex's config.toml.
+/// Returns `None` when the file is absent or unreadable.
+fn read_codex_config_model() -> Option<String> {
+    let home = std::env::var_os("HOME")?;
+    let codex_home = std::env::var_os("CODEX_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(home).join(".codex"));
+    let config_path = codex_home.join("config.toml");
+    let content = fs::read_to_string(config_path).ok()?;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            break;
+        }
+        if let Some(value) = trimmed.strip_prefix("model") {
+            let value = value.trim();
+            if let Some(eq_rest) = value.strip_prefix('=') {
+                let raw = eq_rest.trim().trim_matches('"').trim().to_string();
+                if !raw.is_empty() && raw != "model" {
+                    return Some(raw);
+                }
+            }
+        }
+    }
+    None
 }

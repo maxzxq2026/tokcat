@@ -155,6 +155,54 @@ import Testing
         }
     }
 
+    // The config.toml override wins over the model recorded in the session
+    // file, which can be stale after a CC Switch provider change.
+    @Test func configModelOverridesSessionModel() throws {
+        try withTempJSONL(
+            "config-override",
+            [
+                #"{"type":"turn_context","payload":{"model_info":{"slug":"gpt-5.5"}}}"#,
+                #"{"timestamp":"2026-05-24T00:00:00Z","type":"event_msg","payload":{"type":"token_count","info":{"model":"gpt-5.5","total_token_usage":{"input_tokens":100,"total_tokens":110},"last_token_usage":{"input_tokens":100,"output_tokens":10,"total_tokens":110}}}}"#,
+            ]
+        ) { path in
+            let messages = parseCodexFile(path, configModel: "mimo-v2.5-pro")
+            #expect(messages.count == 1)
+            #expect(messages.first?.modelId == "mimo-v2.5-pro")
+            // Without an override the session-recorded model is kept.
+            let fallback = parseCodexFile(path)
+            #expect(fallback.first?.modelId == "gpt-5.5")
+        }
+    }
+
+    // Port of read_codex_config_model: top-level `model` only, double
+    // quotes stripped, section-scoped keys ignored.
+    @Test func readCodexConfigModelParsesTopLevelModel() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "tokcat-codex-config-\(ProcessInfo.processInfo.processIdentifier)"
+                    + "-\(nowMs())-\(UInt32.random(in: 0..<UInt32.max))")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let configPath = dir.appendingPathComponent("config.toml")
+
+        try """
+        model = "mimo-v2.5-pro"
+        model_profile = "unused"
+
+        [profiles.fast]
+        model = "gpt-5.5"
+        """.write(to: configPath, atomically: true, encoding: .utf8)
+        #expect(readCodexConfigModel(codexHome: dir.path) == "mimo-v2.5-pro")
+
+        // Single quotes are NOT stripped, matching the Rust trim_matches('"').
+        try #"model = 'deepseek-v4'"#
+            .write(to: configPath, atomically: true, encoding: .utf8)
+        #expect(readCodexConfigModel(codexHome: dir.path) == "'deepseek-v4'")
+
+        // A missing config.toml yields nil rather than a crash.
+        #expect(readCodexConfigModel(codexHome: joinPath(dir.path, "missing")) == nil)
+    }
+
     // Port of codex_cached_tokens_do_not_double_count_input (:3057-3070).
     @Test func cachedTokensDoNotDoubleCountInput() {
         let tokens = CodexTotals(input: 100, output: 20, cached: 30, reasoning: 5).intoTokens()
