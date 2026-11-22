@@ -36,11 +36,11 @@ import Testing
                 ("codex", "mimo-v2.5-pro", 700, 4),
             ]),
         ])
-        #expect(models.map(\.model) == ["mimo-v2.5-pro", "gpt-5.3-codex", "claude-sonnet-4"])
+        #expect(models.map(\.model) == ["gpt-5.3-codex", "mimo-v2.5-pro", "claude-sonnet-4"])
         #expect(models[0].tokens == 700)
-        #expect(models[0].messages == 4)
+        #expect(models[0].messages == 7)
         #expect(models[1].tokens == 700)
-        #expect(models[1].messages == 7)
+        #expect(models[1].messages == 4)
         #expect(models[2].tokens == 150)
         #expect(models[2].messages == 4)
         #expect(models[2].breakdown == TokenBreakdown(input: 150))

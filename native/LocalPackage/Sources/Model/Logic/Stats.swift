@@ -133,7 +133,7 @@ public enum StatsBuilder {
     ) -> [ModelAggregate] {
         var map: [String: ModelAggregate] = [:]
         for contribution in contributions {
-            if let month, month > 0, monthComponent(contribution.date) != month {
+            if let month, month > 0, monthValue(of: contribution.date) != month {
                 continue
             }
             for cc in contribution.clients {
@@ -151,11 +151,15 @@ public enum StatsBuilder {
                 map[model] = entry
             }
         }
-        return map.values.sorted { $0.tokens > $1.tokens }
+        // Ties resolve by model id: Swift's sort is not stable, and an
+        // unstable order would reshuffle equal-total models every render.
+        return map.values.sorted { a, b in
+            a.tokens != b.tokens ? a.tokens > b.tokens : a.model < b.model
+        }
     }
 
-    /// "2026-07-15" → 7.
-    private static func monthComponent(_ date: String) -> Int? {
+    /// The month component of a UTC day key: "2026-07-15" → 7.
+    public static func monthValue(of date: String) -> Int? {
         guard date.count >= 7 else { return nil }
         return Int(date.dropFirst(5).prefix(2))
     }
