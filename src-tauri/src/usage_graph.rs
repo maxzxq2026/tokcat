@@ -3147,7 +3147,7 @@ mod tests {
         )
         .unwrap();
 
-        let messages = parse_codex_file(&path);
+        let messages = parse_codex_file(&path, None);
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].tokens.input, 80);
         assert_eq!(messages[0].tokens.cache_read, 20);
@@ -3171,7 +3171,7 @@ mod tests {
         )
         .unwrap();
 
-        let messages = parse_codex_file(&path);
+        let messages = parse_codex_file(&path, None);
         assert_eq!(messages.len(), 2);
         assert_eq!(
             messages
@@ -3200,7 +3200,7 @@ mod tests {
         )
         .unwrap();
 
-        let messages = parse_codex_file(&path);
+        let messages = parse_codex_file(&path, None);
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].tokens.input, 100);
 
