@@ -326,7 +326,8 @@ import Testing
         let data = try JSONEncoder().encode(payload)
         let root = try #require(
             try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        // The day depends on the local timezone (chrono Local semantics).
+        // Date buckets are UTC in this fork (fixed zone, no Local mapping);
+        // the expected date comes from the same helper.
         let expectedDate = dateFromTimestampMs(1_700_000_000_000)
         let meta = try #require(root["meta"] as? [String: Any])
         let metaRange = try #require(meta["dateRange"] as? [String: Any])
